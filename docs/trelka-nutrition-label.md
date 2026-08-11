@@ -1,104 +1,117 @@
 # Trelka — App Store Privacy Nutrition Label
 
-**Prepared:** August 7, 2026
-**Basis:** read-only audit of `ocoee-studios/trelka` @ `4804bdb173132d76a2a8933428f4c8632793c913` (origin/master)
-**App:** Trelka, bundle ID `com.ocoeestudios.trelka`, publisher Ocoee Studios LLC
+**Prepared:** August 11, 2026  
+**Basis:** read-only audit of `ocoee-studios/trelka` release candidate `feat/walkthrough-navigation` @ `cc59e4ab0b86f0276fbcca8a1933d7aeb4f1cc09`  
+**App:** Trelka  
+**Bundle ID:** `com.ocoeestudios.trelka`  
+**Publisher:** Ocoee Studios LLC
+
+> This worksheet describes the current release candidate. Re-run the audit against the exact App Store submission commit before answering App Store Connect, especially if monetization or any new SDK is added.
 
 ---
 
-## Recommended top-level answer
+## Recommended App Store Connect top-level answer
 
 > ### ✅ No, we do not collect data from this app
 
-This is recommended **because the audit verified there is no off-device transmission path**, not because data is stored locally.
+Apple defines collection as transmitting data off the device in a way that allows the developer or integrated third-party partners to access it for longer than is necessary to service the request in real time. Data processed only on device is not considered collected for the App Privacy label.
 
-### Why this is justified
+For the audited Trelka release candidate, property records, seller details, notes, tasks, photos, agent-profile content, and generated reports remain local unless the user explicitly chooses to share, email, print, save, or export them.
 
-Apple defines "collect" as transmitting data off the device and retaining it beyond the transient processing needed to service a request. The audit confirmed:
+### Current verification basis
 
-| Requirement for "No collection" | Verified? | Evidence |
-|---|---|---|
-| No network transmission in app code | ✅ | Zero `fetch`, `XMLHttpRequest`, `WebSocket`, `axios`, or `sendBeacon` calls anywhere in `src/`, `app/`, `index.ts` |
-| No analytics / telemetry SDK | ✅ | Absent from `package.json` **and** from the full resolved dependency tree in `package-lock.json` |
-| No crash / diagnostic reporting | ✅ | No Sentry, Bugsnag, Crashlytics anywhere in the resolved tree |
-| No advertising or attribution SDK | ✅ | No AdMob, Facebook, Adjust, AppsFlyer, Branch, OneSignal in the resolved tree |
-| No backend / cloud storage | ✅ | No API base URL, no cloud DB client, no Supabase/Firebase/AWS |
-| No accounts or authentication | ✅ | No auth, sign-in, token, or credential code |
-| No third party receives data | ✅ | No third-party service is contacted at runtime at all |
+| Check | Result |
+|---|---|
+| Network primitives in app source (`fetch`, `XMLHttpRequest`, `WebSocket`, `axios`, `sendBeacon`) | None found |
+| Analytics / telemetry / crash-reporting SDKs | None found |
+| Advertising / attribution SDKs | None found |
+| Accounts / authentication / cloud sync | None present |
+| Ocoee Studios backend receiving property or seller content | None present |
+| Runtime purchase / subscription SDK | None present in this release candidate |
+| User-directed PDF/email/share/export | Present; initiated by the user |
 
-The only `http://` string in the entire codebase is the SVG XML namespace declaration
-(`xmlns="http://www.w3.org/2000/svg"` in `src/utils/spike-data.ts:29`) — an identifier, not a request.
+Current package dependencies include Expo modules for local storage, camera/photo picking, file/PDF creation, sharing, and the system mail composer. `expo-mail-composer` prepares a system Mail message; it does not create an Ocoee Studios backend or analytics channel.
 
 ---
 
 ## Category-by-category answers
 
 ### Contact Info — **Not collected**
-The app stores a seller name, a seller contact detail, and agent/brokerage profile details. All of it is written to the local SQLite database only. Nothing transmits it. **Not "collected" in Apple's sense.**
+Trelka may store seller names/contact details and agent/brokerage profile fields locally. The developer does not receive those fields through an app server. A valid seller email may be passed into the system mail composer only when the user taps **Email Seller**.
 
-### User Content (photos, notes, property records) — **Not collected**
-Photos, room notes, property records, tasks, and generated PDFs are stored in the app's local container. `expo-print` renders PDFs locally; every `<img src>` in the report HTML points at a local URI (`localUri`, `reportUri`, `headshotLocalUri`, `logoLocalUri`) — no remote asset is fetched during rendering.
+### User Content — **Not collected**
+Property details, room notes, tasks, free-form notes, photos, and generated PDF reports are stored and processed locally. They leave Trelka only through user-directed sharing/export destinations.
 
 ### Photos / Camera — **Permission used, not collected**
-- `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` are declared and accurate.
-- Camera is reached via `ImagePicker.launchCameraAsync` (`app/property/[id]/walkthrough.tsx:423`).
-- Photo library via `ImagePicker.launchImageLibraryAsync` (walkthrough + `app/profile.tsx:152`).
-- **Requesting a permission is not collection.** Captured images never leave the device except by user-initiated share.
+Trelka uses camera/photo-library permissions for property photos and optional profile imagery. Requesting or using those permissions does not by itself mean the developer collects the images. The audited app has no upload service for those files.
 
 ### Identifiers — **Not collected**
-No advertising identifier (IDFA), no vendor identifier, no device ID, no user ID is read or transmitted. `expo-crypto`'s `randomUUID` generates local database primary keys only — these never leave the device and are not tied to a person.
+No advertising identifier, vendor identifier, device identifier, or developer user identifier is transmitted to Ocoee Studios. Locally generated UUIDs are used as app database identifiers.
 
 ### Diagnostics — **Not collected**
-No crash reporting and no performance telemetry. `expo-constants` is read only to display the app version/build in the UI and to prefill a support email body the user composes and sends themselves.
+No crash-reporting or performance-telemetry SDK is present in the audited release candidate.
 
 ### Usage Data — **Not collected**
-No analytics events, no session tracking, no screen-view instrumentation.
+No analytics events, session tracking, screen-view telemetry, or behavioral measurement SDK is present.
 
-### Location, Contacts, Microphone, Health, Financial, Browsing History — **Not collected**
-None of these capabilities exist in the app. `expo-location`, `expo-contacts`, `expo-av`/`expo-audio`, and `expo-notifications` are absent from the entire resolved dependency tree.
+### Location, Contacts, Microphone, Health, Financial Info, Browsing History — **Not collected**
+The audited app does not request or implement these data categories as app features.
 
-### Purchases — **Not collected**
-No in-app purchase implementation. No StoreKit usage, no RevenueCat.
+### Purchases — **Not collected in the audited release candidate**
+No StoreKit/IAP implementation is present in `cc59e4a`. If the planned lifetime purchase is implemented before submission, this section must be re-audited against the final purchase library and Apple framework behavior before the App Privacy questionnaire is submitted.
 
 ---
 
 ## Tracking
 
-**Answer: No.** Trelka does not track. There is no advertising identifier access, no advertising or attribution SDK, no third-party data broker, and no cross-app or cross-website linkage. **No App Tracking Transparency prompt is required**, and `expo-tracking-transparency` is correctly absent.
+**Answer: No.**
 
-## Third-party data receipt
-
-**Answer: None.** No third party receives any data from Trelka. There is no analytics vendor, no backend, no payment processor, and no SDK that phones home.
+Trelka does not link app data with third-party data for advertising or advertising measurement, does not share data with a data broker, and does not include an advertising/attribution SDK. No App Tracking Transparency prompt is required for the audited release candidate.
 
 ---
 
-## User-initiated data egress (disclose in policy, but NOT "collection")
+## User-initiated data leaving the app
 
-These paths exist, are all explicitly user-initiated, and none send anything to Ocoee Studios. They belong in the privacy policy — which they are in — but they do **not** change the nutrition-label answer, because the developer never receives the data.
+These flows are deliberate user actions and do not send content to an Ocoee Studios backend:
 
-| Path | Location | Notes |
-|---|---|---|
-| Share generated PDF report | `app/property/[id]/report.tsx:224` | via `Sharing.shareAsync`, iOS share sheet |
-| Export data as JSON | `app/settings.tsx:234` | property records, rooms, tasks, seller details, agent profile; **photo files deliberately excluded** |
-| Support email | `app/help.tsx:92`, `app/settings.tsx:253` | `Linking.openURL` opens a hardcoded `mailto:support@ocoeestudios.com`; body prefilled with app version/build only. User reviews and sends. |
-| iOS device / iCloud backup | OS-level | outside app control, governed by user's Apple settings |
+| Flow | What happens |
+|---|---|
+| **Email Seller** | Trelka generates the seller PDF and opens the iOS system mail composer. A parseable seller email may be prefilled. The user reviews and sends. |
+| **Share PDF** | Opens the iOS share sheet for the generated report. |
+| **Preview / Print / Save to Files** | Uses local/system destinations selected by the user. |
+| **JSON export** | Creates a local export for the user to save or share. |
+| **Contact Support** | Opens a user-controlled support email to `support@ocoeestudios.com`; the user chooses whether to send it. |
+| **iOS / iCloud backup** | Controlled by the user's Apple/device settings, not an Ocoee Studios sync service. |
 
-`Linking.openURL` is only ever called with a `mailto:` URL built by `supportMailto()` (`src/services/onboarding.ts:136`). It cannot open an arbitrary URL.
-
----
-
-## ⚠️ Items to note before submitting
-
-1. **Seller contact field.** The app has a `sellerContact` column and UI field (`app/property/new.tsx:158`, displayed at `app/property/[id]/index.tsx:255`) — third-party personal information. This does **not** affect the nutrition label (never transmitted), but it is a real privacy-policy obligation and has been documented on the public privacy page. Worth confirming this field is intended to ship.
-
-2. **`expo-camera` is an unused dependency.** It is in `package.json` and configured as a config plugin in `app.json`, but is never imported in `src/` or `app/`. Camera access actually happens through `expo-image-picker`. The camera permission string is still required and accurate, so **this does not change any answer** — but it is dead weight and, if a reviewer greps dependencies, an unnecessary question to invite. Read-only audit, so no change was made.
-
-3. **Audit point vs. local HEAD.** The audit covers pushed `origin/master` @ `4804bdb`. The local working copy was one commit ahead (`333d874`, accessibility layout work). Those commits are UI-layout only and introduce no network or SDK changes, but **re-verify if anything beyond accessibility work lands before submission.**
-
-4. **This answer is version-locked.** Adding accounts, sync, analytics, crash reporting, or purchases in any future build requires revisiting this worksheet before that build ships.
+Once a user deliberately sends or shares content to another recipient/app/service, that destination's own privacy practices apply.
 
 ---
 
-## No ambiguity flagged
+## App Store Connect answers for this release candidate
 
-Every category above resolved cleanly against verified code. There is no category where I had to guess.
+- **Does this app collect data?** → **No**
+- **Data linked to the user?** → **None declared, because no data is collected by the developer/integrated partners in this release candidate**
+- **Data used to track the user?** → **No**
+- **Tracking / ATT?** → **No**
+- **Privacy Policy URL** → `https://ocoee-studios.github.io/trelka-legal/privacy.html`
+- **Privacy Choices URL (optional)** → `https://ocoee-studios.github.io/trelka-legal/privacy-choices.html`
+- **Support URL** → `https://ocoee-studios.github.io/trelka-legal/support.html`
+- **Public App Privacy summary** → `https://ocoee-studios.github.io/trelka-legal/privacy-label.html`
+
+---
+
+## Submission checklist
+
+Before final App Store submission:
+
+1. Audit the exact shipping commit, not an older branch.
+2. Re-scan source and resolved dependencies for network, analytics, advertising, crash-reporting, attribution, auth, cloud, and purchase SDKs.
+3. Confirm the privacy policy still matches the shipping feature set.
+4. If StoreKit/lifetime Pro is added, review the purchase SDK and update this worksheet before answering App Store Connect.
+5. Generate/review Xcode's privacy report/privacy manifests for the archive as an additional check.
+
+---
+
+## Current conclusion
+
+For `feat/walkthrough-navigation` @ `cc59e4a`, the evidence supports Apple's **“Data Not Collected”** presentation. This conclusion is intentionally version-locked and must be refreshed if the shipping build changes its data flows or SDKs.
